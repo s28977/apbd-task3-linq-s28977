@@ -1,6 +1,6 @@
-using LinqConsoleLab.EN.Data;
+using apbd_task3_linq_s28977.Data;
 
-namespace LinqConsoleLab.EN.Exercises;
+namespace apbd_task3_linq_s28977.Exercises;
 
 public sealed class LinqExercises
 {
@@ -17,7 +17,7 @@ public sealed class LinqExercises
     public IEnumerable<string> Task01_StudentsFromWarsaw()
     {
         return UniversityData.Students.Where(s => s.City == "Warsaw")
-            .Select(st => $"{st.IndexNumber} {st.FirstName} {st.LastName}").ToList();
+            .Select(st => $"{st.IndexNumber} {st.FirstName} {st.LastName} {st.City}").ToList();
     }
 
     /// <summary>
@@ -83,7 +83,7 @@ public sealed class LinqExercises
     /// </summary>
     public IEnumerable<string> Task05_IsThereAnyInactiveEnrollment()
     {
-        return [UniversityData.Enrollments.Exists(e => !e.IsActive) ? "Yes" : "No"];
+        return [UniversityData.Enrollments.Any(e => !e.IsActive) ? "Yes" : "No"];
     }
 
     /// <summary>
@@ -99,10 +99,7 @@ public sealed class LinqExercises
     public IEnumerable<string> Task06_DoAllLecturersHaveDepartment()
     {
         return [
-            UniversityData.Lecturers.Count(l => !string.IsNullOrEmpty(l.Department)) 
-            == UniversityData.Lecturers.Count
-            ? "Yes"
-            : "No"
+            UniversityData.Lecturers.All(l => !string.IsNullOrEmpty(l.Department)) ? "Yes" : "No"
         ];
     }
 
@@ -131,7 +128,7 @@ public sealed class LinqExercises
     /// </summary>
     public IEnumerable<string> Task08_DistinctStudentCities()
     {
-        return UniversityData.Students.OrderBy(s => s.City).Select(s => s.City).Distinct();
+        return UniversityData.Students.Select(s => s.City).Distinct().OrderBy(city => city);
     }
 
     /// <summary>
@@ -163,7 +160,9 @@ public sealed class LinqExercises
     /// </summary>
     public IEnumerable<string> Task10_SecondPageOfCourses()
     {
-        throw NotImplemented(nameof(Task10_SecondPageOfCourses));
+        return UniversityData.Courses.OrderBy(c => c.Title)
+            .Select(c => $"{c.Title} {c.Category}")
+            .Skip(2).Take(2);
     }
 
     /// <summary>
@@ -198,7 +197,27 @@ public sealed class LinqExercises
     /// </summary>
     public IEnumerable<string> Task12_StudentCoursePairs()
     {
-        throw NotImplemented(nameof(Task12_StudentCoursePairs));
+        // I don't know how to do it with flattening, so I did it the normal way
+        return UniversityData.Enrollments
+            .Join(UniversityData.Students,
+                en => en.StudentId,
+                st => st.Id,
+                (en, st) => new
+                {
+                    st.FirstName,
+                    st.LastName,
+                    en.CourseId
+                })
+            .Join(UniversityData.Courses,
+                st_en => st_en.CourseId,
+                co => co.Id,
+                (st_en, co) => new
+                {
+                    st_en.FirstName,
+                    st_en.LastName,
+                    co.Title
+                })
+            .Select(st_en_co => $"{st_en_co.FirstName} {st_en_co.LastName} {st_en_co.Title}");
     }
 
     /// <summary>
@@ -213,7 +232,17 @@ public sealed class LinqExercises
     /// </summary>
     public IEnumerable<string> Task13_GroupEnrollmentsByCourse()
     {
-        throw NotImplemented(nameof(Task13_GroupEnrollmentsByCourse));
+        return UniversityData.Enrollments
+            .Join(UniversityData.Courses,
+                en => en.CourseId,
+                co => co.Id,
+                (en, co) => new
+                {
+                    co.Title,
+                    en.CourseId
+                })
+            .GroupBy(en_co => en_co.Title)
+            .Select(g => $"{g.Key} {g.Count()}");
     }
 
     /// <summary>
@@ -230,7 +259,19 @@ public sealed class LinqExercises
     /// </summary>
     public IEnumerable<string> Task14_AverageGradePerCourse()
     {
-        throw NotImplemented(nameof(Task14_AverageGradePerCourse));
+        return UniversityData.Enrollments
+            .Join(UniversityData.Courses,
+                en => en.CourseId,
+                co => co.Id,
+                (en, co) => new
+                {
+                    co.Title,
+                    en.CourseId,
+                    en.FinalGrade
+                })
+            .Where(en_co => en_co.FinalGrade != null)
+            .GroupBy(en_co => en_co.Title)
+            .Select(g => $"{g.Key} {g.Average(en_co => en_co.FinalGrade)}");
     }
 
     /// <summary>
@@ -246,7 +287,22 @@ public sealed class LinqExercises
     /// </summary>
     public IEnumerable<string> Task15_LecturersAndCourseCounts()
     {
-        throw NotImplemented(nameof(Task15_LecturersAndCourseCounts));
+        return UniversityData.Lecturers
+            .LeftJoin(UniversityData.Courses,
+                l => l.Id,
+                co => co.LecturerId,
+                (l, co) => new
+                {
+                    l.FirstName,
+                    l.LastName,
+                    co
+                })
+            .GroupBy(l_co => new
+                {
+                    l_co.FirstName,
+                    l_co.LastName
+                })
+            .Select(g => $"{g.Key.FirstName} {g.Key.LastName} {g.Count(l_co => l_co.co != null)}");
     }
 
     /// <summary>
@@ -263,7 +319,20 @@ public sealed class LinqExercises
     /// </summary>
     public IEnumerable<string> Task16_HighestGradePerStudent()
     {
-        throw NotImplemented(nameof(Task16_HighestGradePerStudent));
+        return UniversityData.Students
+            .Join(UniversityData.Enrollments,
+                st => st.Id,
+                en => en.StudentId,
+                (st, en) => new
+                {
+                    st.FirstName,
+                    st.LastName,
+                    en.CourseId,
+                    en.FinalGrade
+                })
+            .Where(st_en => st_en.FinalGrade != null)
+            .GroupBy(st_en => new {st_en.FirstName, st_en.LastName})
+            .Select(g => $"{g.Key.FirstName} {g.Key.LastName} {g.Max(st_en => st_en.FinalGrade)}");
     }
 
     /// <summary>

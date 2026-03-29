@@ -1,6 +1,6 @@
-using LinqConsoleLab.EN.Models;
+using apbd_task3_linq_s28977.Models;
 
-namespace LinqConsoleLab.EN.Data;
+namespace apbd_task3_linq_s28977.Data;
 
 public static class UniversityData
 {

@@ -1,4 +1,4 @@
-namespace LinqConsoleLab.EN.Models;
+namespace apbd_task3_linq_s28977.Models;
 
 public sealed class Lecturer
 {
